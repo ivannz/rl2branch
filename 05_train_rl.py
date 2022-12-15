@@ -116,28 +116,43 @@ if __name__ == '__main__':
     # data
     if args.problem == "setcover":
         maximization = False
-        valid_path = "data/instances/setcover/valid_400r_750c_0.05d"
-        train_path = "data/instances/setcover/train_400r_750c_0.05d"
+        nrows, ncols, dens = 500, 1000, 0.05
+
+        suffix = f"{nrows}r_{ncols}c_{dens}d"
+        valid_path = "data/instances/setcover/valid_" + suffix
+        train_path = "data/instances/setcover/train_" + suffix
 
     elif args.problem == "cauctions":
         maximization = True
-        valid_path = "data/instances/cauctions/valid_100_500"
-        train_path = "data/instances/cauctions/train_100_500"
+        number_of_items, number_of_bids = 100, 500
+
+        suffix = f"{number_of_items}_{number_of_bids}"
+        valid_path = "data/instances/cauctions/valid_" + suffix
+        train_path = "data/instances/cauctions/train_" + suffix
 
     elif args.problem == "indset":
         maximization = True
-        valid_path = "data/instances/indset/valid_500_4"
-        train_path = "data/instances/indset/train_500_4"
+        number_of_nodes, affinity = 500, 4
+
+        suffix = f"{number_of_nodes}_{affinity}"
+        valid_path = "data/instances/indset/valid_" + suffix
+        train_path = "data/instances/indset/train_" + suffix
 
     elif args.problem == "ufacilities":
         maximization = False
-        valid_path = "data/instances/ufacilities/valid_35_35_5"
-        train_path = "data/instances/ufacilities/train_35_35_5"
+        number_of_customers, number_of_facilities, ratio = 100, 100, 5
+
+        suffix = f"{number_of_customers}_{number_of_facilities}_{ratio}"
+        valid_path = "data/instances/ufacilities/valid_" + suffix
+        train_path = "data/instances/ufacilities/train_" + suffix
 
     elif args.problem == "mknapsack":
         maximization = True
-        valid_path = "data/instances/mknapsack/valid_100_6"
-        train_path = "data/instances/mknapsack/train_100_6"
+        number_of_items, number_of_knapsacks = 100, 6
+
+        suffix = f"{number_of_items}_{number_of_knapsacks}"
+        valid_path = "data/instances/mknapsack/valid_" + suffix
+        train_path = "data/instances/mknapsack/train_" + suffix
 
     # recover training / validation instances
     valid_instances = [f'{valid_path}/instance_{j+1}.lp' for j in range(config["num_valid_instances"])]
