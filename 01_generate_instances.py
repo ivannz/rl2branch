@@ -612,8 +612,16 @@ if __name__ == '__main__':
         type=valid_seed,
         default=0,
     )
-    parser.add_argument("--train-only", action="store_true")
-    parser.set_defaults(train_only=False)
+    parser.add_argument(
+        "--no-train", help="do not produce training data", action="store_true",
+    )
+    parser.add_argument(
+        "--no-valid", help="do not produce validation data", action="store_true",
+    )
+    parser.add_argument(
+        "--no-other", help="do not produce other data", action="store_true",
+    )
+    parser.set_defaults(no_train=False, no_valid=False, no_other=False)
 
     args = parser.parse_args()
 
@@ -630,17 +638,18 @@ if __name__ == '__main__':
         ncolss = []
         denss = []
 
-        # train instances
-        n = 10000
-        lp_dir = f'data/instances/setcover/train_{nrows}r_{ncols}c_{dens}d'
-        print(f"{n} instances in {lp_dir}")
-        os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
-        nrowss.extend([nrows] * n)
-        ncolss.extend([ncols] * n)
-        denss.extend([dens] * n)
+        if not args.no_train:
+            # train instances
+            n = 10000
+            lp_dir = f'data/instances/setcover/train_{nrows}r_{ncols}c_{dens}d'
+            print(f"{n} instances in {lp_dir}")
+            os.makedirs(lp_dir)
+            filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+            nrowss.extend([nrows] * n)
+            ncolss.extend([ncols] * n)
+            denss.extend([dens] * n)
 
-        if not args.train_only:
+        if not args.no_valid:
             # validation instances
             n = 2000
             lp_dir = f'data/instances/setcover/valid_{nrows}r_{ncols}c_{dens}d'
@@ -651,6 +660,7 @@ if __name__ == '__main__':
             ncolss.extend([ncols] * n)
             denss.extend([dens] * n)
 
+        if not args.no_other:
             # test instances
             n = 100
             nrows = 400
@@ -689,15 +699,16 @@ if __name__ == '__main__':
         filenames = []
         nnodess = []
 
-        # train instances
-        n = 10000
-        lp_dir = f'data/instances/indset/train_{number_of_nodes}_{affinity}'
-        print(f"{n} instances in {lp_dir}")
-        os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
-        nnodess.extend([number_of_nodes] * n)
+        if not args.no_train:
+            # train instances
+            n = 10000
+            lp_dir = f'data/instances/indset/train_{number_of_nodes}_{affinity}'
+            print(f"{n} instances in {lp_dir}")
+            os.makedirs(lp_dir)
+            filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+            nnodess.extend([number_of_nodes] * n)
 
-        if not args.train_only:
+        if not args.no_valid:
             # validation instances
             n = 2000
             lp_dir = f'data/instances/indset/valid_{number_of_nodes}_{affinity}'
@@ -706,6 +717,7 @@ if __name__ == '__main__':
             filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
             nnodess.extend([number_of_nodes] * n)
 
+        if not args.no_other:
             # test instances
             n = 100
             number_of_nodes = 500
@@ -739,16 +751,17 @@ if __name__ == '__main__':
         nitemss = []
         nbidss = []
 
-        # train instances
-        n = 10000
-        lp_dir = f'data/instances/cauctions/train_{number_of_items}_{number_of_bids}'
-        print(f"{n} instances in {lp_dir}")
-        os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
-        nitemss.extend([number_of_items] * n)
-        nbidss.extend([number_of_bids ] * n)
+        if not args.no_train:
+            # train instances
+            n = 10000
+            lp_dir = f'data/instances/cauctions/train_{number_of_items}_{number_of_bids}'
+            print(f"{n} instances in {lp_dir}")
+            os.makedirs(lp_dir)
+            filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+            nitemss.extend([number_of_items] * n)
+            nbidss.extend([number_of_bids ] * n)
 
-        if not args.train_only:
+        if not args.no_valid:
             # validation instances
             n = 2000
             lp_dir = f'data/instances/cauctions/valid_{number_of_items}_{number_of_bids}'
@@ -758,6 +771,7 @@ if __name__ == '__main__':
             nitemss.extend([number_of_items] * n)
             nbidss.extend([number_of_bids ] * n)
 
+        if not args.no_other:
             # test instances
             n = 100
             number_of_items = 100
@@ -796,17 +810,18 @@ if __name__ == '__main__':
         nfacilitiess = []
         ratios = []
 
-        # train instances
-        n = 10000
-        lp_dir = f'data/instances/ufacilities/train_{number_of_customers}_{number_of_facilities}_{ratio}'
-        print(f"{n} instances in {lp_dir}")
-        os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
-        ncustomerss.extend([number_of_customers] * n)
-        nfacilitiess.extend([number_of_facilities] * n)
-        ratios.extend([ratio] * n)
+        if not args.no_train:
+            # train instances
+            n = 10000
+            lp_dir = f'data/instances/ufacilities/train_{number_of_customers}_{number_of_facilities}_{ratio}'
+            print(f"{n} instances in {lp_dir}")
+            os.makedirs(lp_dir)
+            filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+            ncustomerss.extend([number_of_customers] * n)
+            nfacilitiess.extend([number_of_facilities] * n)
+            ratios.extend([ratio] * n)
 
-        if not args.train_only:
+        if not args.no_valid:
             # validation instances
             n = 2000
             lp_dir = f'data/instances/ufacilities/valid_{number_of_customers}_{number_of_facilities}_{ratio}'
@@ -817,6 +832,7 @@ if __name__ == '__main__':
             nfacilitiess.extend([number_of_facilities] * n)
             ratios.extend([ratio] * n)
 
+        if not args.no_other:
             # test instances
             n = 100
             number_of_customers = 35
@@ -854,16 +870,17 @@ if __name__ == '__main__':
         nitemss = []
         nknapsackss = []
 
-        # train instances
-        n = 10000
-        lp_dir = f'data/instances/mknapsack/train_{number_of_items}_{number_of_knapsacks}'
-        print(f"{n} instances in {lp_dir}")
-        os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
-        nitemss.extend([number_of_items] * n)
-        nknapsackss.extend([number_of_knapsacks ] * n)
+        if not args.no_train:
+            # train instances
+            n = 10000
+            lp_dir = f'data/instances/mknapsack/train_{number_of_items}_{number_of_knapsacks}'
+            print(f"{n} instances in {lp_dir}")
+            os.makedirs(lp_dir)
+            filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+            nitemss.extend([number_of_items] * n)
+            nknapsackss.extend([number_of_knapsacks ] * n)
 
-        if not args.train_only:
+        if not args.no_valid:
             # validation instances
             n = 2000
             lp_dir = f'data/instances/mknapsack/valid_{number_of_items}_{number_of_knapsacks}'
@@ -873,6 +890,7 @@ if __name__ == '__main__':
             nitemss.extend([number_of_items] * n)
             nknapsackss.extend([number_of_knapsacks ] * n)
 
+        if not args.no_other:
             # test instances
             n = 100
             number_of_knapsacks = 6
