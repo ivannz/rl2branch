@@ -35,7 +35,7 @@ class Brain:
         elif not isinstance(greedy, torch.Tensor):
             greedy = torch.tensor(greedy, dtype=torch.long)
 
-        states_loader = torch_geometric.data.DataLoader(states, batch_size=self.config['batch_size'])
+        states_loader = torch_geometric.loader.DataLoader(states, batch_size=self.config['batch_size'])
         greedy_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(greedy), batch_size=self.config['batch_size'])
 
         action_idxs = []
