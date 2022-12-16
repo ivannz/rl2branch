@@ -22,7 +22,7 @@ def log(str, logfile=None):
 
 class State(torch_geometric.data.Data):
     def __init__(self, constraint_features, edge_index, edge_attr, variable_features,
-                 action_set, action_set_size, node_id):
+                 action_set, action_set_size, node_id, num_nodes=None):
         super().__init__()
         self.constraint_features = constraint_features
         self.edge_index = edge_index
@@ -31,6 +31,7 @@ class State(torch_geometric.data.Data):
         self.action_set = action_set
         self.action_set_size = action_set_size
         self.node_id = node_id
+        self.num_nodes = num_nodes
 
     def __inc__(self, key, value, *args, **kwargs):
         if key == 'edge_index':
