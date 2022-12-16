@@ -32,13 +32,13 @@ class State(torch_geometric.data.Data):
         self.action_set_size = action_set_size
         self.node_id = node_id
 
-    def __inc__(self, key, value):
+    def __inc__(self, key, value, *args, **kwargs):
         if key == 'edge_index':
             return torch.tensor([[self.constraint_features.size(0)], [self.variable_features.size(0)]])
         elif key == 'action_set':
             return self.variable_features.size(0)
         else:
-            return super().__inc__(key, value)
+            return super().__inc__(key, value, *args, **kwargs)
 
     def to(self, device):
         """
@@ -65,13 +65,13 @@ class Transition(torch_geometric.data.Data):
         self.cum_nnodes = cum_nnodes
         self.returns = None
 
-    def __inc__(self, key, value):
+    def __inc__(self, key, value, *args, **kwargs):
         if key == 'edge_index':
             return torch.tensor([[self.constraint_features.size(0)], [self.variable_features.size(0)]])
         elif key == 'action_set':
             return self.variable_features.size(0)
         else:
-            return super().__inc__(key, value)
+            return super().__inc__(key, value, *args, **kwargs)
 
     def to(self, device):
         """
@@ -163,13 +163,13 @@ class BipartiteNodeData(torch_geometric.data.Data):
         self.candidate_choices = candidate_choice
         self.candidate_scores = candidate_scores
 
-    def __inc__(self, key, value):
+    def __inc__(self, key, value, *args, **kwargs):
         if key == 'edge_index':
             return torch.tensor([[self.constraint_features.size(0)], [self.variable_features.size(0)]])
         elif key == 'candidates':
             return self.variable_features.size(0)
         else:
-            return super().__inc__(key, value)
+            return super().__inc__(key, value, *args, **kwargs)
 
 
 class GraphDataset(torch_geometric.data.Dataset):
