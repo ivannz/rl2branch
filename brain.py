@@ -62,7 +62,7 @@ class Brain:
            stats = {'loss': 0.0, 'reinforce_loss': 0.0, 'entropy': 0.0}
            return stats
 
-        transitions = torch_geometric.data.DataLoader(transitions, batch_size=16, shuffle=True)
+        transitions = torch_geometric.loader.DataLoader(transitions, batch_size=16, shuffle=True)
 
         stats = {}
 

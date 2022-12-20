@@ -37,7 +37,7 @@ if __name__ == "__main__":
     result_file = f"{args.problem}_{time.strftime('%Y%m%d-%H%M%S')}.csv"
     instances = []
     seeds = [0, 1, 2, 3, 4]
-    internal_branchers = ['relpscost']
+    internal_branchers = ['relpscost', 'vanillafullstrong', 'emulated-vanillafullstrong']
     gcnn_models = ['il', 'mdp', 'tmdp+DFS', 'tmdp+ObjLim']
     time_limit = 3600
 
@@ -147,10 +147,39 @@ if __name__ == "__main__":
             print(f"{instance['type']}: {instance['path']}...")
 
             for policy in branching_policies:
-                if policy['type'] == 'internal':
+                if policy['name'] == "emulated-vanillafullstrong":
+                    # Manually run the the vanilla SB brancher
+                    env = ecole.environment.Branching(
+                        observation_function=ecole.observation.StrongBranchingScores(),
+                        scip_params=scip_parameters,
+                    )
+                    env.seed(policy['seed'])
+
+                    walltime = time.perf_counter()
+                    proctime = time.process_time()
+
+                    obs, actset, _, fin, _ = env.reset(instance['path'])
+                    while not fin:
+                        act = actset[obs[actset].argmax()]
+                        obs, actset, _, fin, _ = env.step(act)
+
+                    walltime = time.perf_counter() - walltime
+                    proctime = time.process_time() - proctime
+
+                elif policy['type'] == 'internal':
                     # Run SCIP's default brancher
-                    env = ecole.environment.Configuring(scip_params={**scip_parameters,
-                                                        f"branching/{policy['name']}/priority": 9999999})
+                    env = ecole.environment.Configuring(scip_params={
+                        **scip_parameters,
+                        f"branching/{policy['name']}/priority": 9999999,
+                        # "branching/vanillafullstrong/maxdepth": -1,
+                        # "branching/vanillafullstrong/maxbounddist": 1,
+                        # "branching/vanillafullstrong/integralcands": False,
+                        "branching/vanillafullstrong/idempotent": True,
+                        # "branching/vanillafullstrong/scoreall": False,
+                        # "branching/vanillafullstrong/collectscores": False,
+                        # "branching/vanillafullstrong/donotbranch": False,
+                    })
+
                     env.seed(policy['seed'])
 
                     walltime = time.perf_counter()
