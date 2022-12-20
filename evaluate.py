@@ -178,7 +178,7 @@ if __name__ == "__main__":
                             observation = (torch.from_numpy(observation.row_features.astype(np.float32)).to(device),
                                            torch.from_numpy(observation.edge_features.indices.astype(np.int64)).to(device),
                                            torch.from_numpy(observation.edge_features.values.astype(np.float32)).view(-1, 1).to(device),
-                                           torch.from_numpy(observation.column_features.astype(np.float32)).to(device))
+                                           torch.from_numpy(observation.variable_features.astype(np.float32)).to(device))
 
                             logits = policy['model'](*observation)
                             action = action_set[logits[action_set.astype(np.int64)].argmax()]
