@@ -53,8 +53,11 @@ class State(torch_geometric.data.Data):
         return State(**cuda_values)
 
 class Transition(torch_geometric.data.Data):
-    def __init__(self, state, action=None, cum_nnodes=None):
+    def __init__(self, state, action=None, cum_nnodes=None, returns=None, batch=None, ptr=None):
         super().__init__()
+        if state is None:
+            return
+
         self.constraint_features = state.constraint_features
         self.edge_index = state.edge_index
         self.edge_attr = state.edge_attr
@@ -66,7 +69,9 @@ class Transition(torch_geometric.data.Data):
 
         self.action = action
         self.cum_nnodes = cum_nnodes
-        self.returns = None
+        self.returns = returns
+        self.batch = batch
+        self.ptr = ptr
 
     def __inc__(self, key, value, *args, **kwargs):
         if key == 'edge_index':
