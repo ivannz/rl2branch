@@ -84,10 +84,10 @@ def body(policies: list[dict], task: Task) -> dict:
 
 
 class CTX(NamedTuple):
-    errors: Queue
+    err: Queue
     fin: Event
-    rx: Queue
-    tx: Queue
+    q_input: Queue
+    q_output: Queue
 
 
 def recv(fin: Event, q: Queue, *, timeout: float = 0.5) -> ...:
@@ -113,33 +113,27 @@ def send(fin: Event, q: Queue, item: ..., *, timeout: float = 0.5) -> None:
 def t_source(it: Iterable, ctx: CTX, timeout: float = 0.5) -> None:
     try:
         while not ctx.fin.is_set():
-            send(ctx.fin, ctx.rx, next(it), timeout=timeout)
+            send(ctx.fin, ctx.q_input, next(it), timeout=timeout)
 
     except StopIteration:
         pass
 
     except Exception as e:
-        ctx.errors.put_nowait(e)
-
-    finally:
-        ctx.fin.set()
+        ctx.err.put_nowait(e)
 
 
 def t_relay(fn: Callable, ctx: CTX, timeout: float = 0.5) -> None:
     try:
         while not ctx.fin.is_set():
-            input = recv(ctx.fin, ctx.rx, timeout=timeout)
+            input = recv(ctx.fin, ctx.q_input, timeout=timeout)
             for output in fn(input):
-                send(ctx.fin, ctx.tx, output, timeout=timeout)
+                send(ctx.fin, ctx.q_output, output, timeout=timeout)
 
     except StopIteration:
         pass
 
     except Exception as e:
-        ctx.errors.put_nowait(e)
-
-    finally:
-        ctx.fin.set()
+        ctx.err.put_nowait(e)
 
 
 def run_configuring(
@@ -213,6 +207,13 @@ def run_branching(
     return env.model, wt, pt
 
 
+def maybe_raise(err: Queue) -> None:
+    """Raise if the error queue has an exception"""
+    with err.mutex:
+        if err.queue:
+            raise err.queue.popleft()
+
+
 def main(
     prefix: str,
     folder: str,
@@ -256,23 +257,24 @@ def main(
             )
 
         # main loop
-        try:
-            for t in threads:
-                t.start()
+        for t in threads:
+            t.start()
 
-            while not ctx.fin.is_set():
-                yield recv(ctx.fin, ctx.tx, timeout=timeout)
+        try:
+            # the main thread yields results from the rollout output queue
+            while True:
+                maybe_raise(ctx.err)
+                try:
+                    yield ctx.q_output.get(True, timeout=timeout)
+
+                except Empty:
+                    continue
 
         finally:
             # shutdown and raise any errors
             ctx.fin.set()
-            try:
-                if not ctx.errors.empty():
-                    raise ctx.errors.get()
-
-            finally:
-                for t in threads:
-                    t.join()
+            for t in threads:
+                t.join()
 
 
 if __name__ == "__main__":
