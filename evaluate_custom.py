@@ -15,7 +15,7 @@ from typing import Iterable, NamedTuple, Callable
 
 from actor.actor import GNNPolicy
 
-from threading import Thread, Event
+from threading import Thread, Event, Lock
 from queue import Queue, Empty, Full
 from functools import partial
 
@@ -83,26 +83,30 @@ def body(policies: list[dict], task: Task) -> dict:
         }
 
 
-class CTX(NamedTuple):
-    err: Queue
-    fin: Event
-    q_input: Queue
-    q_output: Queue
-
-
-def recv(fin: Event, q: Queue, *, timeout: float = 0.5) -> ...:
+def recv(
+    q: Queue,
+    *,
+    stop: Callable = (lambda: False),
+    depleted: Callable = (lambda: False),
+    timeout: float = 0.5,
+) -> ...:
     # busy-check the termination flag until we receive a job
-    while not fin.is_set():
+    while not stop():
         try:
             return q.get(True, timeout=timeout)
 
         except Empty:
-            continue
+            if depleted():
+                break
+
+    raise StopIteration
 
 
-def send(fin: Event, q: Queue, item: ..., *, timeout: float = 0.5) -> None:
+def send(
+    q: Queue, item: ..., *, stop: Callable = (lambda: False), timeout: float = 0.5
+) -> None:
     # keep regularly checking the termination flag until we receive a value
-    while not fin.is_set():
+    while not stop():
         try:
             return q.put(item, True, timeout=timeout)
 
@@ -110,30 +114,74 @@ def send(fin: Event, q: Queue, item: ..., *, timeout: float = 0.5) -> None:
             continue
 
 
-def t_source(it: Iterable, ctx: CTX, timeout: float = 0.5) -> None:
+def t_from_iter(
+    it: Iterable,
+    q: Queue,
+    *,
+    stop: Callable = (lambda: False),
+    throw: Callable = None,
+    signal: Callable = (lambda: None),
+    timeout: float = 0.5,
+    lk: Lock = Lock()  # noqa B008
+) -> None:
     try:
-        while not ctx.fin.is_set():
-            send(ctx.fin, ctx.q_input, next(it), timeout=timeout)
+        item = next(it)
+        while not stop():
+            try:
+                q.put(item, True, timeout=timeout)
+
+            except Full:
+                continue
+
+            item = next(it)
 
     except StopIteration:
         pass
 
     except Exception as e:
-        ctx.err.put_nowait(e)
+        if not callable(throw):
+            raise
+
+        throw(e)
+
+    finally:
+        with lk:
+            signal()
 
 
-def t_relay(fn: Callable, ctx: CTX, timeout: float = 0.5) -> None:
+def t_relay(
+    qi: Queue,
+    fn: Callable,
+    qo: Queue,
+    *,
+    stop: Callable = (lambda: False),
+    throw: Callable = None,
+    depleted: Callable = (lambda: False),
+    signal: Callable = (lambda: None),
+    timeout: float = 0.5,
+    lk: Lock = Lock()  # noqa B008
+) -> None:
     try:
-        while not ctx.fin.is_set():
-            input = recv(ctx.fin, ctx.q_input, timeout=timeout)
+        while not stop():
+            try:
+                input = qi.get(True, timeout=timeout)
+
+            except Empty:
+                if depleted():
+                    break
+
             for output in fn(input):
-                send(ctx.fin, ctx.q_output, output, timeout=timeout)
-
-    except StopIteration:
-        pass
+                send(qo, output, stop=stop, timeout=timeout)
 
     except Exception as e:
-        ctx.err.put_nowait(e)
+        if not callable(throw):
+            raise
+
+        throw(e)
+
+    finally:
+        with lk:
+            signal()
 
 
 def run_configuring(
@@ -248,31 +296,63 @@ def main(
     else:
         timeout = 1.0
 
-        # spawn source and worker threads
-        ctx = CTX(Queue(), Event(), Queue(2 * n_jobs), Queue())
-        threads = [Thread(target=t_source, args=(tasks, ctx, timeout), daemon=True)]
+        # the queue for error messages, the global termination flag and
+        #  the iterator depletion flag
+        err, fin = Queue(), Event()
+        q_input, q_output = Queue(2 * n_jobs), Queue()
+
+        # spawn source thread
+        sig = Event()
+        ctx_s = dict(
+            stop=fin.is_set,
+            timeout=timeout,
+            throw=err.put_nowait,
+            signal=sig.set,  # indicate that the iterator has been depleted
+        )
+        threads = [
+            Thread(target=t_from_iter, args=(tasks, q_input), kwargs=ctx_s, daemon=True)
+        ]
+
+        # worker threads
+        ctx_w = dict(
+            stop=fin.is_set,
+            timeout=timeout,
+            throw=err.put_nowait,
+            depleted=sig.is_set,  # check, if the source thread consumed the iterator
+        )
+        offline = []
         for _ in range(n_jobs):
+            sig = Event()
+            offline.append(sig)
             threads.append(
-                Thread(target=t_relay, args=(evaluate, ctx, timeout), daemon=True)
+                Thread(
+                    target=t_relay,
+                    args=(q_input, evaluate, q_output),
+                    kwargs=dict(**ctx_w, signal=sig.set),
+                    daemon=True,
+                )
             )
 
         # main loop
         for t in threads:
             t.start()
 
+        # the main thread yields results from the rollout output queue
         try:
-            # the main thread yields results from the rollout output queue
             while True:
-                maybe_raise(ctx.err)
+                # re-raise pending exceptions, and check if all workers terminated
+                maybe_raise(err)
+                if all(f.is_set() for f in offline):
+                    break
+
                 try:
-                    yield ctx.q_output.get(True, timeout=timeout)
+                    yield q_output.get(True, timeout=timeout)
 
                 except Empty:
-                    continue
+                    pass
 
         finally:
-            # shutdown and raise any errors
-            ctx.fin.set()
+            fin.set()
             for t in threads:
                 t.join()
 
