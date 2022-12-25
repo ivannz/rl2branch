@@ -56,18 +56,27 @@ class Brain:
 
         return action_idxs
 
-    def update(self, transitions):
+    def update(self, transitions, *, minibatch: bool = False, batch_size: int = 16):
+        # `n_updates` is the number of optimizer `.step`
         n_samples, n_updates = len(transitions), 0
         if n_samples < 1:
-           stats = {'loss': 0.0, 'reinforce_loss': 0.0, 'entropy': 0.0}
-           return stats, n_updates
+            stats = {'loss': 0.0, 'reinforce_loss': 0.0, 'entropy': 0.0}
+            return stats, n_updates
 
-        transitions = torch_geometric.loader.DataLoader(transitions, batch_size=16, shuffle=True)
+        transitions = torch_geometric.loader.DataLoader(
+            transitions, batch_size=batch_size, shuffle=True
+        )
 
         stats = {}
 
-        self.optimizer.zero_grad()
+        # minibatch = True likely breaks the on-policy property of the updates
+        if not minibatch:
+            self.optimizer.zero_grad()
+
         for batch in transitions:
+            if minibatch:
+                self.optimizer.zero_grad()
+
             batch = batch.to(self.device)
             loss = torch.tensor([0.0], device=self.device)
             logits = self.actor(batch.constraint_features, batch.edge_index, batch.edge_attr, batch.variable_features)
@@ -91,9 +100,13 @@ class Brain:
             stats['loss'] = stats.get('loss', 0.0) + loss.item()
             stats['reinforce_loss'] = stats.get('reinforce_loss', 0.0) + reinforce_loss.item()
             stats['entropy'] = stats.get('entropy', 0.0) + entropy.item()
+            if minibatch:
+                self.optimizer.step()
+                n_updates += 1
 
-        self.optimizer.step()
-        n_updates += 1  # number of optimizer `.step`
+        if not minibatch:
+            self.optimizer.step()
+            n_updates += 1
 
         return stats, n_updates
 

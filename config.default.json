@@ -2,6 +2,7 @@
     "lr": 1e-6,
 
     "entropy_bonus": 1e-5,
+    "minibatch": false,
 
     "num_epochs": 20000,
     "time_limit": 4000,

@@ -84,6 +84,7 @@ if __name__ == '__main__':
     # override config with command-line arguments if provided
     args_config = {key: getattr(args, key) for key in config.keys() & vars(args).keys()}
     config.update(args_config)
+    assert "minibatch" in config
 
     # configure gpu
     if config['gpu'] == -1:
@@ -262,7 +263,11 @@ if __name__ == '__main__':
             t_queue.join()  # wait for all training episodes to be processed
             logger.info('  training jobs finished')
             logger.info(f"  {len(t_samples)} training samples collected")
-            t_losses, n_grad_updates = brain.update(t_samples)
+            t_losses, n_grad_updates = brain.update(
+                # XXX `batch_size` here is not the same as config["batch_size"]!
+                # XXX defaults for (minibatch, batch_size) are (False, 16)
+                t_samples, minibatch=config["minibatch"], batch_size=16,
+            )
             logger.info('  model parameters were updated')
 
             t_nnodess = [s['info']['nnodes'] for s in t_stats]
