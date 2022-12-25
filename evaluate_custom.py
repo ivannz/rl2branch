@@ -113,6 +113,8 @@ def send(
         except Full:
             continue
 
+    raise StopIteration
+
 
 def t_from_iter(
     it: Iterable,
