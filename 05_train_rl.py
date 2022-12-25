@@ -67,9 +67,9 @@ if __name__ == '__main__':
         elif isinstance(value, bool):
             # toggle if boolean
             if value:
-                parser.add_argument(f"--{param}", action="store_false")
+                parser.add_argument(f"--no-{param}", dest=param, action="store_false")
             else:
-                parser.add_argument(f"--{param}", action="store_true")
+                parser.add_argument(f"--{param}", dest=param, action="store_true")
 
         else:
             parser.add_argument(
