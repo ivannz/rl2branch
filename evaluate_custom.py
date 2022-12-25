@@ -268,6 +268,7 @@ def main(
     gpu: int = -1,
     entropy: int = None,
     n_jobs: int = 1,
+    snapshot: str = None,
 ) -> Iterable[dict]:
     device = torch.device("cpu" if gpu < 0 else f"cuda:{gpu}")
 
@@ -276,10 +277,18 @@ def main(
     tasks = head(ss, folder, filter, n_replications)
 
     policies = []
-    for name in ["il", "mdp", "tmdp+DFS", "tmdp+ObjLim"]:
+    if isinstance(snapshot, str) and os.path.isfile(snapshot):
         policy = GNNPolicy().to(device)
-        policy.load_state_dict(torch.load(f"{prefix}{name}.pkl"))
+        policy.load_state_dict(torch.load(snapshot))
+
+        name = os.path.basename(snapshot)
         policies.append(dict(type="gcnn", name=name, policy=policy, device=device))
+
+    else:
+        for name in ["il", "mdp", "tmdp+DFS", "tmdp+ObjLim"]:
+            policy = GNNPolicy().to(device)
+            policy.load_state_dict(torch.load(f"{prefix}{name}.pkl"))
+            policies.append(dict(type="gcnn", name=name, policy=policy, device=device))
 
     for name in ["internal:relpscost", "internal:vanillafullstrong"]:
         type, name = name.split(":")
@@ -359,11 +368,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("prefix", type=str, help="Path prefix to GNN policy snapshots")
     parser.add_argument("folder", type=str, help="The target folder")
+    parser.add_argument(
+        "--snapshot", type=str, help="The particular snapshot to evaluate"
+    )
     parser.add_argument("--filter", type=str, help="The extensions", default="*.mps")
     parser.add_argument("-j", "--n_jobs", help="n_jobs", type=int, default=1)
     parser.add_argument("--entropy", type=int, help="Seed entropy")
     parser.add_argument("-g", "--gpu", help="GPU (-1 for CPU).", type=int, default=-1)
-    parser.set_defaults(filter="*.mps", gpu=-1, entropy=None, n_jobs=1)
+    parser.set_defaults(filter="*.mps", gpu=-1, entropy=None, n_jobs=1, snapshot=None)
 
     args, _ = parser.parse_known_args()
 
