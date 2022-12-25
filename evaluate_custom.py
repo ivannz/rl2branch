@@ -35,6 +35,8 @@ def head(
     """Evaluation task source"""
     folder = os.path.abspath(folder)
     files = glob.glob(os.path.join(folder, filter), recursive=False)
+
+    # the original code had the loops swapped
     for file in sorted(files, key=lambda f: glob.os.path.split(f)[1]):
         for j, sk in enumerate(ss.spawn(n_replications)):
             yield Task(file, j, sk)
