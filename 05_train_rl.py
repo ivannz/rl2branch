@@ -64,12 +64,20 @@ if __name__ == '__main__':
                 help = 'Random generator seed.',
                 default=argparse.SUPPRESS,
             )
+        elif isinstance(value, bool):
+            # toggle if boolean
+            if value:
+                parser.add_argument(f"--{param}", action="store_false")
+            else:
+                parser.add_argument(f"--{param}", action="store_true")
+
         else:
             parser.add_argument(
                 f"--{param}",
                 type=type(value),
                 default=argparse.SUPPRESS,
             )
+
     args = parser.parse_args()
 
     # override config with the user config file if provided
