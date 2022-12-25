@@ -57,10 +57,10 @@ class Brain:
         return action_idxs
 
     def update(self, transitions):
-        n_samples = len(transitions)
+        n_samples, n_updates = len(transitions), 0
         if n_samples < 1:
            stats = {'loss': 0.0, 'reinforce_loss': 0.0, 'entropy': 0.0}
-           return stats
+           return stats, n_updates
 
         transitions = torch_geometric.loader.DataLoader(transitions, batch_size=16, shuffle=True)
 
@@ -93,8 +93,9 @@ class Brain:
             stats['entropy'] = stats.get('entropy', 0.0) + entropy.item()
 
         self.optimizer.step()
+        n_updates += 1  # number of optimizer `.step`
 
-        return stats
+        return stats, n_updates
 
     def save(self):
         # Save in the same directory as the pretrained params

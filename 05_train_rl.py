@@ -24,6 +24,8 @@ from scipy.stats.mstats import gmean
 
 
 if __name__ == '__main__':
+    n_total_grad_updates = 100_000
+
     # read default config file
     with open("config.default.json", 'r') as f:
         config = json.load(f)
@@ -191,6 +193,7 @@ if __name__ == '__main__':
         t_samples_next, t_stats_next, t_queue_next, t_access_next = agent_pool.start_job(train_batch, sample_rate=config['sample_rate'], greedy=False, block_policy=True)
 
     # training loop
+    n_updates = 0
     start_time = datetime.now()
     best_tree_size = np.inf
     for epoch in range(config['num_epochs'] + 1):
@@ -205,6 +208,7 @@ if __name__ == '__main__':
             # do not do anything with the stats yet, we have to wait for the jobs to finish !
         else:
             logger.info(f"  validation skipped")
+
         if is_training_epoch(epoch):
             t_samples, t_stats, t_queue, t_access = t_samples_next, t_stats_next, t_queue_next, t_access_next
             t_access.set()
@@ -216,10 +220,12 @@ if __name__ == '__main__':
         # Start next epoch's jobs
         if epoch + 1 <= config["num_epochs"]:
             if is_validation_epoch(epoch + 1):
-                _, v_stats_next, v_queue_next, v_access_next = agent_pool.start_job(valid_batch, sample_rate=0.0, greedy=True, block_policy=True)
+                _, v_stats_next, v_queue_next, v_access_next = agent_pool.start_job(
+                    valid_batch, sample_rate=0.0, greedy=True, block_policy=True)
             if is_training_epoch(epoch + 1):
                 train_batch = next(train_batches)
-                t_samples_next, t_stats_next, t_queue_next, t_access_next = agent_pool.start_job(train_batch, sample_rate=config['sample_rate'], greedy=False, block_policy=True)
+                t_samples_next, t_stats_next, t_queue_next, t_access_next = agent_pool.start_job(
+                    train_batch, sample_rate=config['sample_rate'], greedy=False, block_policy=True)
 
         # Validation
         if is_validation_epoch(epoch):
@@ -256,7 +262,7 @@ if __name__ == '__main__':
             t_queue.join()  # wait for all training episodes to be processed
             logger.info('  training jobs finished')
             logger.info(f"  {len(t_samples)} training samples collected")
-            t_losses = brain.update(t_samples)
+            t_losses, n_grad_updates = brain.update(t_samples)
             logger.info('  model parameters were updated')
 
             t_nnodess = [s['info']['nnodes'] for s in t_stats]
@@ -273,6 +279,7 @@ if __name__ == '__main__':
                 'train_reinforce_loss': t_losses.get('reinforce_loss', None),
                 'train_entropy': t_losses.get('entropy', None),
             })
+            n_updates += n_grad_updates
 
         # Send the stats to wandb
         if args.wandb:
@@ -281,6 +288,9 @@ if __name__ == '__main__':
         # If time limit is hit, stop process
         elapsed_time = datetime.now() - start_time
         if elapsed_time.days >= 6: break
+
+        if n_updates >= n_total_grad_updates:
+            break
 
     logger.info(f"Done. Elapset time: {elapsed_time}")
     if args.wandb:
