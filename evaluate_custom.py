@@ -122,7 +122,6 @@ def t_from_iter(
     throw: Callable = None,
     signal: Callable = (lambda: None),
     timeout: float = 0.5,
-    lk: Lock = Lock()  # noqa B008
 ) -> None:
     try:
         item = next(it)
@@ -138,15 +137,14 @@ def t_from_iter(
     except StopIteration:
         pass
 
-    except Exception as e:
+    except BaseException as e:
         if not callable(throw):
             raise
 
         throw(e)
 
     finally:
-        with lk:
-            signal()
+        signal()
 
 
 def t_relay(
@@ -159,7 +157,6 @@ def t_relay(
     depleted: Callable = (lambda: False),
     signal: Callable = (lambda: None),
     timeout: float = 0.5,
-    lk: Lock = Lock()  # noqa B008
 ) -> None:
     try:
         while not stop():
@@ -173,15 +170,14 @@ def t_relay(
             for output in fn(input):
                 send(qo, output, stop=stop, timeout=timeout)
 
-    except Exception as e:
+    except BaseException as e:
         if not callable(throw):
             raise
 
         throw(e)
 
     finally:
-        with lk:
-            signal()
+        signal()
 
 
 def run_configuring(
